@@ -9,7 +9,7 @@
 #include <math.h>
 // Initialize the LCD with the correct address and dimensions (16 columns and 2 rows)
 BluetoothSerial SerialBT;
-BleKeyboard bleKeyboard("Gesture Sensor V2", "Automaton Creations", 100);
+BleKeyboard bleKeyboard("Jestr v1.0", "Automaton Creations", 100);
 // Pins for gesture sensor
 #define APDS9960_INT 2 // Needs to be an interrupt pin
 #define LED_PIN 12
@@ -53,10 +53,11 @@ String lastGesture = "0";
 void setup() {
   // Initialize Serial port
   int i = 0;
-  Serial.begin(9600);
+  Serial.begin(115200);
   Serial.println(F("--------------------------------"));
   Serial.println(F("Jestr OS V1.0"));
   Serial.println(F("--------------------------------"));
+  SerialBT.begin("Jestr V1.0");
   bleKeyboard.begin();
   // Initialize the LCD
 
@@ -78,7 +79,6 @@ void setup() {
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, LOW);
   
-  Serial.begin(9600);
 
   // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
   if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
@@ -174,7 +174,7 @@ void loop() {
   if (gesture != "NONE"){
       blinkLED();
   }
-
+  listenForBluetoothCommands();
    // Small delay for readability
 }
 
@@ -219,13 +219,40 @@ String handleGesture() {
   display.println(gesture);
   display.display();
   
-  Serial.println(gesture);
+  SerialBT.println(gesture);
 
     }
   
   return gesture; // Return the detected gesture
 }
 
+void listenForBluetoothCommands() {
+  // Check if data is available on the Bluetooth serial
+  if (SerialBT.available()) {
+    // Read the incoming message until a newline character
+    String received = SerialBT.readStringUntil('\n');
+    received.trim(); // Remove any leading/trailing whitespace
+    Serial.print("Received command: ");
+    Serial.println(received);
+
+    // Respond according to the received command
+    if (received == "HELLO") {
+      SerialBT.println("Hi Unity!");
+    }
+    else if (received == "GET_GESTURE") {
+      // If you want to return the current gesture,
+      // you might call handleGesture() or use a stored value.
+      String currentGesture = handleGesture();
+      SerialBT.println("Current Gesture: " + currentGesture);
+    }
+    else if (received == "PING") {
+      SerialBT.println("PONG");
+    }
+    else {
+      SerialBT.println("Unknown command: " + received);
+    }
+  }
+}
 
 
 
