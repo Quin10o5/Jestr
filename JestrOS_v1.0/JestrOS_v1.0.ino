@@ -221,7 +221,7 @@ String handleGesture() {
   display.println(gesture);
   display.display();
   
-  SerialBT.println(gesture);
+  sendMessage(gesture);
 
     }
   
@@ -242,21 +242,25 @@ void listenForBluetoothCommands() {
     // Read the incoming message until a newline character
     String received = SerialBT.readStringUntil('\n');
     received.trim(); // Remove any leading/trailing whitespace
-    SerialBT.print("Received command: ");
-    SerialBT.println(received);
+    sendMessage("Received command: ");
+    Serial.println(received);
+    sendMessage(received);
     String identifier = received.substring(0, 4);
     String pckg = received.substring(4);
-    SerialBT.println(received);
     // Respond according to the received command
     if(identifier == "SPKG"){
       parseSongPackage(pckg);
     }
     if(identifier == "PING"){
-      SerialBT.println("PONG");;
+      sendMessage("PONG");;
     }
   }
 }
 
+void sendMessage(String msg){
+  SerialBT.println(msg);
+  SerialBT.flush();
+}
 
 struct SongPackage {
   String currentSong;      // Current Song
