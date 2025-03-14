@@ -57,8 +57,9 @@ void setup() {
   Serial.println(F("--------------------------------"));
   Serial.println(F("Jestr OS V1.0"));
   Serial.println(F("--------------------------------"));
-  SerialBT.begin("Jestr V1.0");
   bleKeyboard.begin();
+  SerialBT.begin("Jestr V1.0");
+  
   // Initialize the LCD
 
   // Initialize the gesture sensor
@@ -170,11 +171,12 @@ void blinkLED(){
 
 void loop() {
   // Check for gestures and display on LCD
+  listenForBluetoothCommands();
   String gesture = handleGesture();
   if (gesture != "NONE"){
       blinkLED();
   }
-  listenForBluetoothCommands();
+  
    // Small delay for readability
 }
 
@@ -228,31 +230,82 @@ String handleGesture() {
 
 void listenForBluetoothCommands() {
   // Check if data is available on the Bluetooth serial
+  // SPKG = Song Package
+  // CSNG = Current song
+  // CABM = Current Album
+  // CART = Current Artist
+  // CSTM = Current Song Time
+  // CSLN = Current Song Length
+  // 
+
   if (SerialBT.available()) {
     // Read the incoming message until a newline character
     String received = SerialBT.readStringUntil('\n');
     received.trim(); // Remove any leading/trailing whitespace
-    Serial.print("Received command: ");
-    Serial.println(received);
-
+    SerialBT.print("Received command: ");
+    SerialBT.println(received);
+    String identifier = received.substring(0, 4);
+    String pckg = received.substring(4);
+    SerialBT.println(received);
     // Respond according to the received command
-    if (received == "HELLO") {
-      SerialBT.println("Hi Unity!");
+    if(identifier == "SPKG"){
+      parseSongPackage(pckg);
     }
-    else if (received == "GET_GESTURE") {
-      // If you want to return the current gesture,
-      // you might call handleGesture() or use a stored value.
-      String currentGesture = handleGesture();
-      SerialBT.println("Current Gesture: " + currentGesture);
-    }
-    else if (received == "PING") {
-      SerialBT.println("PONG");
-    }
-    else {
-      SerialBT.println("Unknown command: " + received);
+    if(identifier == "PING"){
+      SerialBT.println("PONG");;
     }
   }
 }
+
+
+struct SongPackage {
+  String currentSong;      // Current Song
+  String currentPlaylist;      // Current Playlist
+  String currentArtist;      // Current Artist
+  String currentSongTime; // Current Song Time
+  String currentSongLength; // Current Song Length
+};
+
+int startIndex = 0;
+int delimIndex = 0;
+SongPackage CurrentSong;
+
+void parseSongPackage(String input){
+  while ((delimIndex = input.indexOf('*', startIndex)) != -1) {
+    String token = input.substring(startIndex, delimIndex);
+    String identifier = input.substring(0, 4);
+    String pckg = input.substring(4);
+    if(identifier == "CSNG"){
+      CurrentSong.currentSong = pckg;
+    }
+    if(identifier == "CPLT"){
+      CurrentSong.currentPlaylist = pckg;
+    }
+    if(identifier == "CART"){
+      CurrentSong.currentArtist = pckg;
+    }
+    if(identifier == "CSTM"){
+      CurrentSong.currentSongTime = pckg;
+    }
+    if(identifier == "CSLN"){
+      CurrentSong.currentSongLength = pckg;
+    }
+    startIndex = delimIndex + 1;
+  }
+  // Print the last token (after the final delimiter)
+  String token = input.substring(startIndex);
+  display.clearDisplay();
+  display.setTextSize(1.5);             // Normal 1:1 pixel scale
+  display.setTextColor(SSD1306_WHITE);        // Draw white text
+  display.setCursor(0,0);    // Print gesture to Serial Monitor
+  display.println(CurrentSong.currentSong);
+  display.setTextSize(1);
+  display.setCursor(0,15); 
+  display.println(CurrentSong.currentArtist);
+  display.display();
+}
+
+
 
 
 
